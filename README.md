@@ -6,9 +6,9 @@ A small collection of single-page HTML pieces.
 
 ## Pages
 
-- [attempt1](attempt1.html)
-- [attempt2](attempt2.html)
-- [attempt3](attempt3.html)
-- [attempt4](attempt4.html)
-- [attempt5](attempt5.html)
-- [attempt6](attempt6.html)
+- [attempt 1](attempt1.html)
+- [attempt 2](attempt2.html)
+- [attempt 3](attempt3.html)
+- [attempt 4](attempt4.html)
+- [attempt 5](attempt5.html)
+- [attempt 6](attempt6.html)
