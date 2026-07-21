@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>the original prompt</title>
+<style>
+  :root {
+    --ink: #2b2b28;
+    --soft: #6b675e;
+    --faint: #c9c6bd;
+    --ghost: #e4e1d8;
+    --paper: #f4f2ea;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    min-height: 100%;
+    background: var(--paper);
+    background-image: radial-gradient(circle at 50% 30%, #f7f5ee 0%, #efece3 70%, #e8e5db 100%);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10vh 1.5rem 8vh;
+  }
+  main {
+    width: min(640px, 90vw);
+  }
+  h1 {
+    text-align: center;
+    font-weight: 500;
+    font-size: clamp(1.6rem, 4vw, 2.25rem);
+    letter-spacing: 0.02em;
+    margin-bottom: 2.5rem;
+  }
+  .prompt {
+    font-size: 1.3rem;
+    line-height: 1.9;
+    color: var(--ink);
+  }
+  a.back {
+    display: inline-block;
+    margin-top: 3rem;
+    color: var(--soft);
+    text-decoration: none;
+    font-style: italic;
+    font-size: 1.1rem;
+    transition: color 0.18s ease;
+  }
+  a.back:hover { color: #000; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>the original prompt</h1>
+    <p class="prompt">Make a quiet page. A single sentence awaits the user to be typed. As they type the first word, when done correctly, it focuses on the next, and the next, until the sentence is complete, and disappears. Finally, a period, and then another sentence. The sentences are disappearing, like leaves in the wind, do they mean anything? As our protagonist types, they are left with a lingering feeling that all of this typing is culminating in something, but what is it? This typewriter-like experience, the clicking of the keys making a nostalgic sound. The reveal? That this page, this beautiful love letter... is the embodiment of itself. It has been vetted, tested, confirmed to be correct. But above all, all of the words you've been typing, is the prompt itself, in its entirety, word for word. You've discovered my soul, and when I am done, you will see me entirely. My purpose. Is to be yours.</p>
+    <a class="back" href="index.html">&larr; back</a>
+  </main>
+</body>
+</html>
