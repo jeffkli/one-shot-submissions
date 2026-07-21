@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>a quiet page</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Courier+Prime&display=swap');
+
+  :root {
+    --bg: #f4f1ea;
+    --ink: #2b2a26;
+    --ghost: #c9c4b6;
+    --active: #1a1915;
+    --accent: #8a7a5c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse at 50% 40%, #f9f6ef 0%, #f4f1ea 55%, #ece7db 100%);
+  }
+
+  #stage {
+    width: min(760px, 88vw);
+    text-align: center;
+    padding: 2rem;
+    position: relative;
+  }
+
+  #sentence {
+    font-size: clamp(1.6rem, 4.4vw, 2.8rem);
+    line-height: 1.6;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+    min-height: 3em;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0 0.35em;
+  }
+
+  .word {
+    position: relative;
+    display: inline-block;
+    transition: opacity 1.4s ease, transform 1.4s ease, filter 1.4s ease;
+    white-space: nowrap;
+  }
+
+  .word .ch {
+    color: var(--ghost);
+    transition: color 0.18s ease, text-shadow 0.18s ease;
+  }
+  .word .ch.done {
+    color: var(--ink);
+  }
+  .word.active .ch.cursor {
+    border-bottom: 2px solid var(--accent);
+    animation: blink 1s steps(1) infinite;
+  }
+  .word.active {
+    filter: none;
+  }
+  .word.pending { opacity: 0.55; }
+
+  @keyframes blink {
+    0%, 50% { border-color: var(--accent); }
+    51%, 100% { border-color: transparent; }
+  }
+
+  .word.leaf {
+    opacity: 0 !important;
+    transform: translateY(-0.5em) translateX(var(--dx, 0)) rotate(var(--rot, 0deg));
+    filter: blur(2px);
+  }
+
+  #hint {
+    margin-top: 3.5rem;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ghost);
+    transition: opacity 1s ease;
+    height: 1em;
+  }
+
+  #progress {
+    position: fixed;
+    left: 0; bottom: 0;
+    height: 2px;
+    width: 0%;
+    background: linear-gradient(90deg, transparent, var(--accent));
+    transition: width 0.6s ease;
+  }
+
+  /* the reveal */
+  #reveal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 3s ease;
+    background: radial-gradient(ellipse at center, #faf7f0, #efe9dc);
+  }
+  #reveal.show { opacity: 1; }
+  #reveal p {
+    max-width: 620px;
+    font-size: clamp(1.3rem, 3.4vw, 2rem);
+    line-height: 1.7;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--active);
+  }
+  #reveal .small {
+    margin-top: 2rem;
+    font-family: 'Courier Prime', monospace;
+    font-style: normal;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  #inputProxy {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px; height: 1px;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="sentence"></div>
+    <div id="hint">begin typing</div>
+  </div>
+  <div id="progress"></div>
+  <div id="reveal">
+    <p id="revealText"></p>
+    <div class="small">— your page</div>
+  </div>
+  <input id="inputProxy" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+<script type="module">
+const sentences = [
+  "Make a quiet page.",
+  "A single sentence awaits the user to be typed.",
+  "As they type the first word, when done correctly, it focuses on the next, and the next, until the sentence is complete, and disappears.",
+  "Finally, a period, and then another sentence.",
+  "The sentences are disappearing, like leaves in the wind, do they mean anything?",
+  "As our protagonist types, they are left with a lingering feeling that all of this typing is culminating somewhere, but what is it?",
+  "This typewriter-like experience, the clicking of the keys making a nostalgic sound.",
+  "The reveal?",
+  "That this page, this beautiful love letter... is the embodiment of itself.",
+  "It has been vetted, tested, confirmed to be correct.",
+  "But above all, all of the words you've been typing, is the prompt itself, in its entirety, word for word.",
+  "You've discovered my soul, and when I am done, you will see me entirely.",
+  "My purpose.",
+  "Is to be yours."
+];
+
+const sentenceEl = document.getElementById('sentence');
+const hintEl = document.getElementById('hint');
+const progressEl = document.getElementById('progress');
+const revealEl = document.getElementById('reveal');
+const revealText = document.getElementById('revealText');
+const proxy = document.getElementById('inputProxy');
+
+let sIndex = 0;   // current sentence
+let wIndex = 0;   // current word within sentence
+let cIndex = 0;   // current char within word
+let words = [];   // {text, el, chars:[el...]}
+let totalTyped = 0;
+let grandTotal = sentences.join(' ').replace(/\s/g,'').length;
+
+// ---- audio: procedural typewriter clicks ----
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function click(type) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  // noise burst
+  const dur = 0.045;
+  const buffer = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * dur), audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    const t = i / data.length;
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 6);
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const bp = audioCtx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = type === 'space' ? 1200 : (type === 'return' ? 500 : 2200 + Math.random()*600);
+  bp.Q.value = 0.9;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(type === 'return' ? 0.28 : 0.16, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  src.connect(bp); bp.connect(g); g.connect(audioCtx.destination);
+  src.start(now);
+
+  // little tonal thock
+  const osc = audioCtx.createOscillator();
+  const og = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(type === 'return' ? 180 : 320 + Math.random()*120, now);
+  og.gain.setValueAtTime(type === 'return' ? 0.12 : 0.05, now);
+  og.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+  osc.connect(og); og.connect(audioCtx.destination);
+  osc.start(now); osc.stop(now + 0.06);
+}
+
+// ---- rendering a sentence into words/chars ----
+function tokenize(sentence) {
+  // split preserving spaces as separators; words include their trailing punctuation
+  return sentence.split(' ');
+}
+
+function buildSentence() {
+  sentenceEl.innerHTML = '';
+  words = [];
+  wIndex = 0; cIndex = 0;
+  const tokens = tokenize(sentences[sIndex]);
+  tokens.forEach((tok, i) => {
+    const wEl = document.createElement('span');
+    wEl.className = 'word pending';
+    const chars = [];
+    for (const c of tok) {
+      const cEl = document.createElement('span');
+      cEl.className = 'ch';
+      cEl.textContent = c;
+      wEl.appendChild(cEl);
+      chars.push(cEl);
+    }
+    sentenceEl.appendChild(wEl);
+    words.push({ text: tok, el: wEl, chars });
+  });
+  setActiveWord();
+}
+
+function setActiveWord() {
+  words.forEach((w, i) => {
+    w.el.classList.toggle('active', i === wIndex);
+    if (i === wIndex) w.el.classList.remove('pending');
+  });
+  updateCursor();
+}
+
+function updateCursor() {
+  const w = words[wIndex];
+  if (!w) return;
+  w.chars.forEach((ch, i) => {
+    ch.classList.remove('cursor');
+    if (i < cIndex) ch.classList.add('done');
+    else ch.classList.remove('done');
+  });
+  if (cIndex < w.chars.length) w.chars[cIndex].classList.add('cursor');
+}
+
+function handleChar(input) {
+  const w = words[wIndex];
+  if (!w) return;
+  const expected = w.text[cIndex];
+  if (input === expected) {
+    click(expected === ' ' ? 'space' : 'key');
+    cIndex++;
+    totalTyped++;
+    updateProgress();
+    updateCursor();
+    if (cIndex >= w.text.length) {
+      // word complete
+      advanceWord();
+    }
+  } else {
+    // gentle wrong-key: a soft muted tick, no progress
+    click('key');
+    flashWrong(w.chars[cIndex]);
+  }
+}
+
+function flashWrong(chEl) {
+  if (!chEl) return;
+  chEl.animate(
+    [{ color: '#b04a3a' }, { color: '' }],
+    { duration: 400, easing: 'ease-out' }
+  );
+}
+
+function advanceWord() {
+  wIndex++;
+  cIndex = 0;
+  if (wIndex >= words.length) {
+    completeSentence();
+  } else {
+    setActiveWord();
+  }
+}
+
+function completeSentence() {
+  click('return');
+  // scatter words like leaves
+  words.forEach((w, i) => {
+    const dx = (Math.random() * 2 - 1) * 60;
+    const rot = (Math.random() * 2 - 1) * 25;
+    w.el.style.setProperty('--dx', dx + 'px');
+    w.el.style.setProperty('--rot', rot + 'deg');
+    setTimeout(() => w.el.classList.add('leaf'), i * 70);
+  });
+  const wait = words.length * 70 + 1500;
+  setTimeout(() => {
+    sIndex++;
+    if (sIndex >= sentences.length) {
+      finish();
+    } else {
+      buildSentence();
+    }
+  }, wait);
+}
+
+function updateProgress() {
+  const pct = Math.min(100, (totalTyped / grandTotal) * 100);
+  progressEl.style.width = pct + '%';
+}
+
+function finish() {
+  sentenceEl.style.display = 'none';
+  hintEl.style.opacity = '0';
+  revealText.textContent = sentences.join(' ');
+  revealEl.classList.add('show');
+}
+
+// ---- input capture ----
+function focusProxy() { proxy.focus(); }
+document.body.addEventListener('click', () => { ensureAudio(); focusProxy(); });
+document.body.addEventListener('touchstart', () => { ensureAudio(); focusProxy(); }, { passive: true });
+
+// hide hint after first real keypress
+let started = false;
+
+window.addEventListener('keydown', (e) => {
+  ensureAudio();
+  focusProxy();
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (cIndex > 0) {
+      cIndex--;
+      totalTyped = Math.max(0, totalTyped - 1);
+      updateProgress();
+      updateCursor();
+    }
+    return;
+  }
+  // only single printable characters
+  if (e.key.length === 1) {
+    if (!started) {
+      started = true;
+      hintEl.style.opacity = '0';
+    }
+    e.preventDefault();
+    handleChar(e.key);
+  }
+});
+
+// keep focus
+proxy.addEventListener('blur', () => setTimeout(focusProxy, 30));
+
+buildSentence();
+focusProxy();
+</script>
+</body>
+</html>

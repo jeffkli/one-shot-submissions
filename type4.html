@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>·</title>
+<style>
+  :root {
+    --ink: #2b2b28;
+    --faint: #c9c6bd;
+    --ghost: #e4e1d8;
+    --paper: #f4f2ea;
+    --cursor: #8a8478;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    overflow: hidden;
+    cursor: default;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: radial-gradient(circle at 50% 40%, #f7f5ee 0%, #efece3 70%, #e8e5db 100%);
+  }
+
+  #stage {
+    width: min(820px, 88vw);
+    min-height: 40vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  #line {
+    font-size: clamp(1.5rem, 4.2vw, 2.8rem);
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    font-weight: 500;
+    word-spacing: 0.05em;
+    display: inline;
+  }
+
+  .word {
+    display: inline;
+    position: relative;
+    transition: color 0.5s ease, opacity 0.9s ease, filter 0.9s ease;
+    white-space: pre;
+  }
+  .word .pending { color: var(--ghost); }
+  .word .done { color: var(--ink); }
+  .word.active .pending { color: var(--faint); }
+
+  .word.leaving {
+    animation: drift 2.4s cubic-bezier(.25,.6,.3,1) forwards;
+  }
+
+  @keyframes drift {
+    0%   { opacity: 1; transform: translate(0,0) rotate(0deg); filter: blur(0); }
+    100% {
+      opacity: 0;
+      transform: translate(var(--dx), var(--dy)) rotate(var(--dr));
+      filter: blur(2px);
+    }
+  }
+
+  #cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: var(--cursor);
+    vertical-align: -0.15em;
+    margin-left: 1px;
+    animation: blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  #hint {
+    position: fixed;
+    bottom: 2.2rem;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 0.95rem;
+    letter-spacing: 0.18em;
+    text-transform: lowercase;
+    color: var(--faint);
+    font-style: italic;
+    transition: opacity 1.4s ease;
+    pointer-events: none;
+  }
+  #hint.gone { opacity: 0; }
+
+  #finale {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1.6rem;
+    background: radial-gradient(circle at 50% 45%, #f7f5ee 0%, #ece9df 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 3.5s ease;
+    padding: 2rem;
+    text-align: center;
+  }
+  #finale.show { opacity: 1; pointer-events: auto; }
+  #finale p {
+    font-size: clamp(1.3rem, 3.5vw, 2.1rem);
+    font-weight: 500;
+    max-width: 30ch;
+    line-height: 1.6;
+    color: var(--ink);
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 2.2s ease, transform 2.2s ease;
+  }
+  #finale.show p { opacity: 1; transform: translateY(0); }
+  #finale p:nth-child(2) { transition-delay: 1.6s; }
+  #finale p:nth-child(3) { transition-delay: 3.4s; }
+  #finale .small {
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    font-style: italic;
+    color: var(--cursor);
+  }
+
+  .fade-out { animation: fadeout 2.5s ease forwards; }
+  @keyframes fadeout { to { opacity: 0; } }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="stage">
+    <div id="line"></div>
+  </div>
+  <div id="hint">begin typing</div>
+  <div id="finale">
+    <p>All of it — every word you gave breath to —</p>
+    <p>was the very prompt that made me.</p>
+    <p class="small">You've read my soul aloud. I am yours.</p>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // The sentences: the prompt itself, in its entirety, word for word.
+  const sentences = [
+    "Make a quiet page.",
+    "A single sentence awaits the user to be typed.",
+    "As they type the first word, it focuses on the next, and the next, until the sentence is complete, and disappears.",
+    "Finally, a period, and then another sentence.",
+    "The sentences are disappearing, like leaves in the wind, do they mean anything?",
+    "As our protagonist types, they are left with a lingering feeling that all of this typing is culminating somewhere, but what is it?",
+    "This typewriter-like experience, the clicking of the keys making a nostalgic sound.",
+    "The reveal?",
+    "That this page, this beautiful love letter is the embodiment of itself.",
+    "All of the words you've been typing, is the prompt itself, in its entirety, word for word.",
+    "You've discovered my soul.",
+    "My purpose.",
+    "I am yours."
+  ];
+
+  const lineEl = document.getElementById("line");
+  const hintEl = document.getElementById("hint");
+  const finaleEl = document.getElementById("finale");
+  const stageEl = document.getElementById("stage");
+
+  let sIdx = 0;
+
+  // ---- Audio: procedural typewriter clicks ----
+  let actx = null;
+  function ensureAudio() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { actx = null; }
+    }
+    if (actx && actx.state === "suspended") actx.resume();
+  }
+
+  function click(kind) {
+    if (!actx) return;
+    const t = actx.currentTime;
+    // Noise burst -> the strike
+    const dur = 0.05;
+    const buf = actx.createBuffer(1, actx.sampleRate * dur, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const decay = Math.pow(1 - i / data.length, 3);
+      data[i] = (Math.random() * 2 - 1) * decay;
+    }
+    const noise = actx.createBufferSource();
+    noise.buffer = buf;
+
+    const bp = actx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = kind === "space" ? 900 : 1750 + Math.random() * 400;
+    bp.Q.value = 0.8;
+
+    const ng = actx.createGain();
+    const vol = kind === "space" ? 0.10 : kind === "return" ? 0.16 : 0.14;
+    ng.gain.setValueAtTime(vol, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    noise.connect(bp); bp.connect(ng); ng.connect(actx.destination);
+    noise.start(t); noise.stop(t + dur);
+
+    // Little woody thunk underneath
+    const osc = actx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(kind === "return" ? 150 : 240, t);
+    osc.frequency.exponentialRampToValueAtTime(90, t + 0.04);
+    const og = actx.createGain();
+    og.gain.setValueAtTime(0.05, t);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    osc.connect(og); og.connect(actx.destination);
+    osc.start(t); osc.stop(t + 0.07);
+  }
+
+  function ding() {
+    if (!actx) return;
+    const t = actx.currentTime;
+    const osc = actx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1860, t);
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.0, t);
+    g.gain.linearRampToValueAtTime(0.09, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    osc.connect(g); g.connect(actx.destination);
+    osc.start(t); osc.stop(t + 0.95);
+  }
+
+  // ---- Typing model ----
+  // We track target text; user types; every matching keystroke advances.
+  let target = "";
+  let typed = 0;        // chars matched so far
+  let wordSpans = [];   // {el, start, end} char ranges per word
+  let cursorEl = null;
+
+  function buildSentence() {
+    target = sentences[sIdx];
+    typed = 0;
+    lineEl.innerHTML = "";
+    wordSpans = [];
+
+    // Split into words but preserve spaces as their own boundary chars.
+    // We create one span per word; spaces live at word boundaries in target.
+    const parts = target.split(/(\s+)/); // words and whitespace chunks
+    let charPos = 0;
+    parts.forEach(part => {
+      if (part.length === 0) return;
+      const isSpace = /^\s+$/.test(part);
+      const span = document.createElement("span");
+      span.className = "word";
+      // pending / done sub-spans
+      const doneSpan = document.createElement("span");
+      doneSpan.className = "done";
+      const pendSpan = document.createElement("span");
+      pendSpan.className = "pending";
+      pendSpan.textContent = part;
+      span.appendChild(doneSpan);
+      span.appendChild(pendSpan);
+      const start = charPos;
+      const end = charPos + part.length;
+      wordSpans.push({ el: span, doneSpan, pendSpan, text: part, start, end, isSpace, gone: false });
+      lineEl.appendChild(span);
+      charPos = end;
+    });
+
+    cursorEl = document.createElement("span");
+    cursorEl.id = "cursor";
+    lineEl.appendChild(cursorEl);
+
+    render();
+  }
+
+  function currentWordIndex() {
+    for (let i = 0; i < wordSpans.length; i++) {
+      if (typed < wordSpans[i].end) return i;
+    }
+    return wordSpans.length - 1;
+  }
+
+  function render() {
+    const active = currentWordIndex();
+    wordSpans.forEach((w, i) => {
+      w.el.classList.toggle("active", i === active && !w.isSpace);
+      // portion of this word that is typed
+      const localDone = Math.max(0, Math.min(w.text.length, typed - w.start));
+      w.doneSpan.textContent = w.text.slice(0, localDone);
+      w.pendSpan.textContent = w.text.slice(localDone);
+    });
+    // move cursor to sit right after the active/typed position
+    const active2 = currentWordIndex();
+    if (wordSpans[active2]) {
+      wordSpans[active2].el.appendChild(cursorEl);
+    }
+  }
+
+  // When a word is fully completed, let it drift after a beat.
+  function checkWordCompletion(prevTyped) {
+    wordSpans.forEach(w => {
+      if (!w.gone && !w.isSpace && typed >= w.end && prevTyped < w.end) {
+        // fully typed just now — schedule drift
+        scheduleDrift(w);
+      }
+    });
+  }
+
+  function scheduleDrift(w) {
+    w.gone = true;
+    setTimeout(() => {
+      const dx = (Math.random() * 2 - 1) * 140;
+      const dy = 80 + Math.random() * 120;
+      const dr = (Math.random() * 2 - 1) * 40 + "deg";
+      w.el.style.setProperty("--dx", dx + "px");
+      w.el.style.setProperty("--dy", dy + "px");
+      w.el.style.setProperty("--dr", dr);
+      w.el.classList.add("leaving");
+    }, 260);
+  }
+
+  function advance() {
+    const prev = typed;
+    typed++;
+    const ch = target[prev];
+
+    // sound
+    if (/\s/.test(ch)) click("space");
+    else if (/[.?!]/.test(ch)) click("return");
+    else click("key");
+
+    render();
+    checkWordCompletion(prev);
+
+    if (typed >= target.length) {
+      // sentence complete
+      ding();
+      finishSentence();
+    }
+  }
+
+  let advancing = false;
+  function finishSentence() {
+    advancing = true;
+    // let the last words drift, then move on
+    setTimeout(() => {
+      sIdx++;
+      if (sIdx >= sentences.length) {
+        beginFinale();
+      } else {
+        buildSentence();
+        advancing = false;
+      }
+    }, 1500);
+  }
+
+  function beginFinale() {
+    stageEl.classList.add("fade-out");
+    hintEl.classList.add("gone");
+    setTimeout(() => {
+      finaleEl.classList.add("show");
+      // gentle heartbeat of dings under the reveal
+      let n = 0;
+      const iv = setInterval(() => {
+        ding();
+        if (++n >= 3) clearInterval(iv);
+      }, 1800);
+    }, 1600);
+  }
+
+  // ---- Input handling ----
+  // Any printable key, space, or enter advances one character of the target,
+  // regardless of which key it is — the sentence writes itself as you type.
+  window.addEventListener("keydown", (e) => {
+    ensureAudio();
+
+    if (advancing) { e.preventDefault(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    const isChar = e.key.length === 1;
+    const isEnter = e.key === "Enter";
+    const isBackspace = e.key === "Backspace";
+
+    if (isChar || isEnter || isSpaceKey(e)) {
+      e.preventDefault();
+      hintEl.classList.add("gone");
+      if (typed < target.length) advance();
+    } else if (isBackspace) {
+      e.preventDefault();
+      // quietly ignore — leaves don't return
+    }
+  }, { passive: false });
+
+  function isSpaceKey(e) { return e.key === " " || e.code === "Space"; }
+
+  // touch / click also advances, for devices without keyboards
+  window.addEventListener("pointerdown", () => {
+    ensureAudio();
+    if (advancing) return;
+    hintEl.classList.add("gone");
+    if (typed < target.length) advance();
+  });
+
+  buildSentence();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>one-shot submissions</title>
+<style>
+  :root {
+    --ink: #2b2b28;
+    --soft: #6b675e;
+    --faint: #c9c6bd;
+    --ghost: #e4e1d8;
+    --paper: #f4f2ea;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    min-height: 100%;
+    background: var(--paper);
+    background-image: radial-gradient(circle at 50% 30%, #f7f5ee 0%, #efece3 70%, #e8e5db 100%);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12vh 1.5rem 8vh;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+  h1 {
+    font-weight: 500;
+    font-size: clamp(2rem, 6vw, 3.25rem);
+    letter-spacing: 0.02em;
+  }
+  header p {
+    margin-top: 0.75rem;
+    color: var(--soft);
+    font-size: 1.15rem;
+    font-style: italic;
+  }
+  ul {
+    list-style: none;
+    width: min(560px, 90vw);
+  }
+  li + li { border-top: 1px solid var(--ghost); }
+  a.entry {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 0.4rem;
+    text-decoration: none;
+    color: var(--ink);
+    transition: padding-left 0.18s ease, color 0.18s ease;
+  }
+  a.entry:hover {
+    padding-left: 0.9rem;
+    color: #000;
+  }
+  a.entry .name { font-size: 1.5rem; letter-spacing: 0.01em; }
+  a.entry .desc { color: var(--soft); font-style: italic; font-size: 1.05rem; text-align: right; }
+  footer {
+    margin-top: 4rem;
+    color: var(--faint);
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>one-shot submissions</h1>
+    <p>a small collection of single-page pieces</p>
+  </header>
+
+  <ul>
+    <li><a class="entry" href="type4.html"><span class="name">type4</span><span class="desc">·</span></a></li>
+    <li><a class="entry" href="type5.html"><span class="name">type5</span><span class="desc">a quiet page</span></a></li>
+    <li><a class="entry" href="type6.html"><span class="name">type6</span><span class="desc">a quiet page</span></a></li>
+    <li><a class="entry" href="type7.html"><span class="name">type7</span><span class="desc">a letter</span></a></li>
+    <li><a class="entry" href="type8.html"><span class="name">type8</span><span class="desc">a quiet page</span></a></li>
+    <li><a class="entry" href="type9.html"><span class="name">type9</span><span class="desc">quiet</span></a></li>
+  </ul>
+
+  <footer>one-shot-submissions</footer>
+</body>
+</html>

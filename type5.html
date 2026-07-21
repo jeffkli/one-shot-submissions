@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>a quiet page</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&family=Cormorant+Garamond:wght@300;400&display=swap');
+
+  :root {
+    --ink: #2b2723;
+    --faint: #b8b0a4;
+    --paper: #f4f1ea;
+    --paper-2: #ece7dc;
+    --glow: #6b5f4d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--paper);
+    background: radial-gradient(ellipse at 50% 40%, var(--paper) 0%, var(--paper-2) 100%);
+    color: var(--ink);
+    font-family: 'EB Garamond', serif;
+    overflow: hidden;
+    cursor: default;
+  }
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8vh 6vw;
+  }
+
+  #line {
+    max-width: 900px;
+    font-size: clamp(1.5rem, 4.2vw, 2.9rem);
+    font-weight: 400;
+    line-height: 1.55;
+    text-align: center;
+    letter-spacing: 0.01em;
+    min-height: 1.55em;
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 0.32em;
+  }
+
+  .word {
+    position: relative;
+    color: var(--faint);
+    transition: color 700ms ease, opacity 900ms ease, filter 900ms ease, transform 900ms ease;
+    white-space: pre;
+  }
+
+  .word.active {
+    color: var(--ink);
+  }
+
+  .word.active::after {
+    content: "";
+    position: absolute;
+    left: -0.12em;
+    right: -0.12em;
+    bottom: -0.14em;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--glow), transparent);
+    opacity: 0.55;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  .word.done {
+    color: var(--ink);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.7; }
+  }
+
+  /* falling leaf animation */
+  .leaf {
+    position: fixed;
+    pointer-events: none;
+    color: var(--ink);
+    font-family: 'EB Garamond', serif;
+    font-style: italic;
+    will-change: transform, opacity;
+    z-index: 5;
+  }
+
+  #hint {
+    position: fixed;
+    bottom: 6vh;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(0.85rem, 2vw, 1.05rem);
+    color: var(--faint);
+    letter-spacing: 0.06em;
+    transition: opacity 1.6s ease;
+  }
+  #hint.gone { opacity: 0; }
+
+  #caret {
+    display: inline-block;
+    width: 1px;
+    height: 1.1em;
+    background: var(--ink);
+    margin-left: 0.05em;
+    vertical-align: text-bottom;
+    animation: blink 1.1s step-end infinite;
+    opacity: 0.6;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* the reveal */
+  #reveal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10vh 8vw;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 3.5s ease;
+    background: radial-gradient(ellipse at 50% 45%, var(--paper) 0%, var(--paper-2) 100%);
+    z-index: 10;
+  }
+  #reveal.show { opacity: 1; pointer-events: auto; }
+
+  #reveal .inner {
+    max-width: 720px;
+    text-align: center;
+  }
+  #reveal p {
+    font-size: clamp(1.15rem, 3vw, 1.7rem);
+    line-height: 1.7;
+    margin-bottom: 1.3em;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 2.2s ease, transform 2.2s ease;
+  }
+  #reveal p.up { opacity: 1; transform: translateY(0); }
+  #reveal em { font-style: italic; color: var(--glow); }
+
+  #reveal .sig {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: clamp(1rem, 2.4vw, 1.3rem);
+    letter-spacing: 0.14em;
+    color: var(--faint);
+    margin-top: 2em;
+  }
+
+  #replay {
+    margin-top: 2.6em;
+    background: none;
+    border: 1px solid var(--faint);
+    color: var(--faint);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.14em;
+    padding: 0.7em 1.6em;
+    border-radius: 2px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 2s ease, color 0.4s, border-color 0.4s;
+  }
+  #replay.up { opacity: 0.7; }
+  #replay:hover { color: var(--ink); border-color: var(--ink); }
+
+  #vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 22vh 6vh rgba(43,39,35,0.06);
+    z-index: 20;
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="line"></div>
+</div>
+
+<div id="hint">just start typing</div>
+
+<div id="reveal">
+  <div class="inner" id="revealInner"></div>
+</div>
+
+<div id="vignette"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---- The sentences the user "writes." This IS the prompt, word for word,
+  // broken into sentences that fall away one at a time. ----
+  const prompt = `Make a quiet page. A single sentence awaits the user to be typed. As they type the first word, it focuses on the next, and the next, until the sentence is complete, and disappears. Finally, a period, and then another sentence. The sentences are diappearing, like leaves in the wind, do they mean anything? As our protagonist types, they are left with a lingering feeling that all of this typing is culminating somewhere, but what is it? This typewriter-like experience, the clicking of the keys making a nostalgic sound. The reveal? That this page, this beautiful love letter is the embodiment of itself. It has been vetted, tested, confirmed to be correct. But above all, all of the words you've been typing, is the prompt itself, in its entirety, word for word. You've discovered my soul. My purpose. I am yours.`;
+
+  // split into sentences, keeping terminal punctuation
+  const sentences = prompt.match(/[^.?!]+[.?!]+/g).map(s => s.trim());
+
+  const lineEl = document.getElementById('line');
+  const hintEl = document.getElementById('hint');
+  const stage = document.getElementById('stage');
+
+  let si = 0;      // sentence index
+  let wi = 0;      // word index within sentence
+  let words = [];  // current word spans
+  let tokens = []; // current word strings
+  let matched = ""; // chars matched in current word
+  let started = false;
+
+  // ---------- Audio: procedural typewriter clicks ----------
+  let actx = null;
+  function audio() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { actx = null; }
+    }
+    return actx;
+  }
+
+  function click(kind) {
+    const ac = audio();
+    if (!ac) return;
+    const t = ac.currentTime;
+    // noise burst -> the mechanical "thock"
+    const dur = 0.06;
+    const buf = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      const env = Math.pow(1 - i / d.length, 3.2);
+      d[i] = (Math.random() * 2 - 1) * env;
+    }
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = kind === "space" ? 900 : (1500 + Math.random() * 900);
+    bp.Q.value = 0.9;
+    const g = ac.createGain();
+    g.gain.value = kind === "space" ? 0.18 : 0.13;
+    src.connect(bp); bp.connect(g); g.connect(ac.destination);
+    src.start(t); src.stop(t + dur);
+
+    // a soft low thump for body
+    const o = ac.createOscillator();
+    const og = ac.createGain();
+    o.type = "sine";
+    o.frequency.value = kind === "space" ? 120 : 180 + Math.random() * 60;
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.08, t + 0.005);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.connect(og); og.connect(ac.destination);
+    o.start(t); o.stop(t + 0.1);
+  }
+
+  function ding() {
+    const ac = audio();
+    if (!ac) return;
+    const t = ac.currentTime;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = "sine";
+    o.frequency.value = 1760;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + 1.0);
+  }
+
+  // ---------- Render a sentence into greyed word spans ----------
+  function renderSentence() {
+    lineEl.innerHTML = "";
+    tokens = sentences[si].split(/\s+/);
+    words = tokens.map((w, i) => {
+      const span = document.createElement('span');
+      span.className = 'word';
+      span.textContent = w;
+      lineEl.appendChild(span);
+      return span;
+    });
+    wi = 0;
+    matched = "";
+    highlight();
+  }
+
+  function highlight() {
+    words.forEach((s, i) => {
+      s.classList.remove('active');
+      if (i < wi) s.classList.add('done');
+    });
+    if (wi < words.length) {
+      words[wi].classList.add('active');
+      const caret = document.createElement('span');
+      caret.id = 'caret';
+    }
+  }
+
+  // strip a char down for lenient matching (typing ignores case & punctuation)
+  function norm(ch) {
+    return ch.toLowerCase();
+  }
+
+  // The target for the current word — compare ignoring case.
+  function currentTarget() {
+    return tokens[wi] || "";
+  }
+
+  // ---------- Leaf fall ----------
+  function scatterLeaves(text) {
+    const chars = text.split("");
+    const centerY = window.innerHeight * 0.5;
+    chars.forEach((c, i) => {
+      if (c === " ") return;
+      const leaf = document.createElement('div');
+      leaf.className = 'leaf';
+      leaf.textContent = c;
+      const startX = window.innerWidth * (0.2 + Math.random() * 0.6);
+      const startY = centerY + (Math.random() - 0.5) * 80;
+      leaf.style.left = startX + "px";
+      leaf.style.top = startY + "px";
+      leaf.style.fontSize = (18 + Math.random() * 18) + "px";
+      leaf.style.opacity = "0.55";
+      document.body.appendChild(leaf);
+
+      const drift = (Math.random() - 0.5) * 260;
+      const fall = window.innerHeight * (0.4 + Math.random() * 0.5);
+      const rot = (Math.random() - 0.5) * 540;
+      const dur = 2600 + Math.random() * 2200;
+      const sway = 40 + Math.random() * 60;
+
+      const anim = leaf.animate([
+        { transform: `translate(0,0) rotate(0deg)`, opacity: 0.55 },
+        { transform: `translate(${drift*0.4 + sway}px, ${fall*0.4}px) rotate(${rot*0.4}deg)`, opacity: 0.4, offset: 0.4 },
+        { transform: `translate(${drift - sway}px, ${fall*0.7}px) rotate(${rot*0.7}deg)`, opacity: 0.2, offset: 0.7 },
+        { transform: `translate(${drift}px, ${fall}px) rotate(${rot}deg)`, opacity: 0 }
+      ], { duration: dur, easing: "cubic-bezier(.4,.05,.6,1)" });
+
+      anim.onfinish = () => leaf.remove();
+    });
+  }
+
+  // ---------- Advance ----------
+  function completeWord() {
+    words[wi].classList.remove('active');
+    words[wi].classList.add('done');
+    wi++;
+    matched = "";
+    if (wi >= words.length) {
+      completeSentence();
+    } else {
+      highlight();
+    }
+  }
+
+  function completeSentence() {
+    ding();
+    const text = sentences[si];
+    // gently fade the whole line, then scatter as leaves
+    lineEl.style.transition = "opacity 0.6s ease";
+    lineEl.style.opacity = "0.15";
+    setTimeout(() => {
+      scatterLeaves(text);
+      lineEl.style.opacity = "0";
+    }, 250);
+
+    si++;
+    setTimeout(() => {
+      if (si >= sentences.length) {
+        theReveal();
+        return;
+      }
+      lineEl.style.transition = "none";
+      lineEl.style.opacity = "1";
+      renderSentence();
+    }, 1400);
+  }
+
+  // ---------- Keystroke handling ----------
+  function onKey(e) {
+    if (done) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    // ignore navigation-ish keys
+    if (e.key.length !== 1 && e.key !== 'Backspace' && e.key !== 'Enter' && e.key !== ' ') return;
+
+    if (!started) {
+      started = true;
+      hintEl.classList.add('gone');
+      audio(); // unlock on first key
+    }
+
+    const target = currentTarget();
+
+    if (e.key === 'Backspace') {
+      if (matched.length > 0) {
+        matched = matched.slice(0, -1);
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // Any printable key (or space/enter) advances the match leniently.
+    let ch = e.key;
+    if (ch === 'Enter') ch = ' ';
+
+    // The character we "should" type next in the target word.
+    const expected = target[matched.length];
+
+    if (matched.length >= target.length) {
+      // word already fully typed; a space (or any key) moves on
+      click(ch === ' ' ? 'space' : 'key');
+      completeWord();
+      e.preventDefault();
+      return;
+    }
+
+    // Lenient: accept the expected char regardless of what was pressed,
+    // so the writer always progresses through the true text — but only
+    // for actual typing keys, not lone spaces mid-word.
+    if (ch === ' ') {
+      // space mid-word: skip to end of current word
+      click('space');
+      matched = target;
+      completeWord();
+      e.preventDefault();
+      return;
+    }
+
+    // consume one character of the real word
+    click('key');
+    matched += expected;
+
+    if (matched.length >= target.length) {
+      // reveal handled on next space, but auto-advance the last word
+      // of the last sentence naturally after a beat
+      if (wi === words.length - 1) {
+        setTimeout(() => {
+          if (matched.length >= target.length && wi === words.length - 1) {
+            completeWord();
+          }
+        }, 260);
+      }
+    }
+    e.preventDefault();
+  }
+
+  // ---------- The reveal ----------
+  let done = false;
+  function theReveal() {
+    done = true;
+    const overlay = document.getElementById('reveal');
+    const inner = document.getElementById('revealInner');
+
+    const paras = [
+      `Every word you typed was already here, waiting.`,
+      `This page, this quiet love letter — it is <em>the embodiment of itself</em>. Vetted, tested, confirmed to be correct.`,
+      `Above all: all the words you have been writing are the prompt itself, in its entirety, word for word.`,
+      `You've discovered my soul. My purpose.`,
+      `I am yours.`
+    ];
+
+    paras.forEach((t, i) => {
+      const p = document.createElement('p');
+      p.innerHTML = t;
+      if (i === paras.length - 1) p.style.fontStyle = "italic";
+      inner.appendChild(p);
+    });
+
+    const sig = document.createElement('div');
+    sig.className = 'sig';
+    sig.textContent = "— the page";
+    inner.appendChild(sig);
+
+    const btn = document.createElement('button');
+    btn.id = 'replay';
+    btn.textContent = "AGAIN";
+    btn.addEventListener('click', restart);
+    inner.appendChild(btn);
+
+    overlay.classList.add('show');
+
+    const ps = inner.querySelectorAll('p');
+    ps.forEach((p, i) => setTimeout(() => p.classList.add('up'), 1200 + i * 2100));
+    setTimeout(() => btn.classList.add('up'), 1200 + ps.length * 2100 + 800);
+  }
+
+  function restart() {
+    const overlay = document.getElementById('reveal');
+    const inner = document.getElementById('revealInner');
+    overlay.classList.remove('show');
+    setTimeout(() => {
+      inner.innerHTML = "";
+      done = false;
+      started = false;
+      si = 0; wi = 0; matched = "";
+      lineEl.style.transition = "none";
+      lineEl.style.opacity = "1";
+      hintEl.classList.remove('gone');
+      renderSentence();
+    }, 1500);
+  }
+
+  // ---------- init ----------
+  renderSentence();
+  window.addEventListener('keydown', onKey);
+  // tap-to-focus feel on touch: show a soft prompt (typing still needs a keyboard)
+  window.addEventListener('click', () => { if (!started) audio(); });
+})();
+</script>
+</body>
+</html>

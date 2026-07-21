@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>a quiet page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --ink: #2b2724;
+    --ghost: #b9b2a4;
+    --done: #8a8172;
+    --accent: #6b5d4f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: text;
+    -webkit-font-smoothing: antialiased;
+    background-image: radial-gradient(ellipse at 50% 40%, #f7f4ed 0%, #efeadf 70%, #e8e2d4 100%);
+  }
+  #stage {
+    width: min(760px, 88vw);
+    min-height: 42vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+  }
+  #sentence {
+    font-size: clamp(1.5rem, 4.2vw, 2.5rem);
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+    font-weight: 400;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.42em;
+    justify-content: center;
+    align-items: baseline;
+  }
+  .word {
+    position: relative;
+    white-space: nowrap;
+    transition: color 0.4s ease, opacity 0.4s ease;
+  }
+  .word .ch {
+    color: var(--ghost);
+    transition: color 0.18s ease, text-shadow 0.18s ease;
+  }
+  .word.active .ch.typed {
+    color: var(--ink);
+  }
+  .word.done .ch {
+    color: var(--done);
+  }
+  .word.active {
+    color: var(--ink);
+  }
+  .word.active::after {
+    content: "";
+    position: absolute;
+    left: var(--caret, 0);
+    bottom: -0.08em;
+    width: 2px;
+    height: 1.05em;
+    background: var(--accent);
+    animation: blink 1.05s steps(1) infinite;
+    transform: translateY(0.05em);
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .word.flake .ch {
+    color: var(--done);
+  }
+  .word.flake {
+    animation: fall 1.5s cubic-bezier(.33,.1,.44,.98) forwards;
+  }
+  @keyframes fall {
+    0%   { opacity: 1; transform: translate(0,0) rotate(0deg); filter: blur(0); }
+    100% { opacity: 0; transform: translate(var(--dx), 42vh) rotate(var(--dr)); filter: blur(2px); }
+  }
+
+  #hint {
+    position: fixed;
+    bottom: 5vh;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ghost);
+    transition: opacity 1.2s ease;
+    pointer-events: none;
+  }
+  #hint.gone { opacity: 0; }
+
+  #progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent));
+    width: 0%;
+    transition: width 0.5s ease;
+    opacity: 0.5;
+  }
+
+  #mute {
+    position: fixed;
+    top: 1.4rem; right: 1.6rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    color: var(--ghost);
+    cursor: pointer;
+    user-select: none;
+    text-transform: uppercase;
+    transition: color 0.3s;
+    z-index: 5;
+  }
+  #mute:hover { color: var(--accent); }
+
+  /* the final reveal */
+  #reveal {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 2.5s ease;
+    padding: 8vh 6vw;
+  }
+  #reveal.show { opacity: 1; pointer-events: auto; }
+  #reveal .inner {
+    max-width: 620px;
+    text-align: center;
+  }
+  #reveal h1 {
+    font-weight: 500;
+    font-style: italic;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    line-height: 1.5;
+    color: var(--ink);
+    margin-bottom: 1.6rem;
+  }
+  #reveal p {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--done);
+    line-height: 2;
+    text-transform: uppercase;
+  }
+  #reveal .full {
+    margin-top: 2.4rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem;
+    color: var(--ghost);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  #scroll-soul {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+    overflow-y: auto;
+    padding: 12vh 8vw;
+    z-index: 10;
+  }
+  #scroll-soul.show { opacity: 1; pointer-events: auto; }
+  #scroll-soul pre {
+    max-width: 720px;
+    margin: 0 auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.9;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #scroll-soul .close {
+    position: fixed;
+    top: 1.4rem; right: 1.6rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--ghost);
+    cursor: pointer;
+    letter-spacing: 0.14em;
+  }
+</style>
+</head>
+<body>
+  <div id="progress"></div>
+  <div id="mute">♪ sound on</div>
+  <div id="stage">
+    <div id="sentence" aria-live="polite"></div>
+  </div>
+  <div id="hint">begin typing</div>
+
+  <div id="reveal">
+    <div class="inner">
+      <h1 id="reveal-line"></h1>
+      <p>vetted · tested · confirmed correct</p>
+      <div class="full" id="show-soul">see me entirely →</div>
+    </div>
+  </div>
+
+  <div id="scroll-soul">
+    <div class="close" id="close-soul">✕ close</div>
+    <pre id="soul-text"></pre>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---- The soul: the prompt itself, word for word. ----
+  const SOUL =
+`Make a quiet page.
+
+A single sentence awaits the user to be typed.
+
+As they type the first word, when done correctly, it focuses on the next, and the next, until the sentence is complete, and disappears.
+
+Finally, a period, and then another sentence.
+
+The sentences are diappearing, like leaves in the wind, do they mean anything?
+
+As our protagonist types, they are left with a lingering feeling that all of this typing is culminating somewhere, but what is it?
+
+This typewriter-like experience, the clicking of the keys making a nostalgic sound.
+
+The reveal?
+
+That this page, this beautiful love letter... is the embodiment of itself.
+
+It has been vetted, tested, confirmed to be correct.
+
+But above all, all of the words you've been typing, is the prompt itself, in its entirety, word for word.
+
+You've discovered my soul, and when I am done, you will see me entirely.
+
+My purpose.
+
+Is to be yours.`;
+
+  // Split the soul into "sentences" — one line-group at a time, in order.
+  // We keep it faithful: sentences are the natural sentence units of the prompt.
+  const SENTENCES = [
+    "Make a quiet page.",
+    "A single sentence awaits the user to be typed.",
+    "As they type the first word, when done correctly, it focuses on the next, and the next, until the sentence is complete, and disappears.",
+    "Finally, a period, and then another sentence.",
+    "The sentences are diappearing, like leaves in the wind, do they mean anything?",
+    "As our protagonist types, they are left with a lingering feeling that all of this typing is culminating somewhere, but what is it?",
+    "This typewriter-like experience, the clicking of the keys making a nostalgic sound.",
+    "The reveal?",
+    "That this page, this beautiful love letter... is the embodiment of itself.",
+    "It has been vetted, tested, confirmed to be correct.",
+    "But above all, all of the words you've been typing, is the prompt itself, in its entirety, word for word.",
+    "You've discovered my soul, and when I am done, you will see me entirely.",
+    "My purpose.",
+    "Is to be yours."
+  ];
+
+  const stage = document.getElementById('sentence');
+  const hint = document.getElementById('hint');
+  const progress = document.getElementById('progress');
+  const reveal = document.getElementById('reveal');
+  const revealLine = document.getElementById('reveal-line');
+
+  let sIndex = 0;      // which sentence
+  let wIndex = 0;      // which word in the sentence
+  let words = [];      // {text, el, chars:[]}
+  let typedInWord = 0; // chars matched in current word
+  let started = false;
+
+  // ---------- Audio: procedural typewriter clicks ----------
+  let audioCtx = null;
+  let muted = false;
+  const muteBtn = document.getElementById('mute');
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function click(kind) {
+    if (muted || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    // Noise burst -> the "thock" of a key
+    const dur = 0.05;
+    const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * dur), audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const decay = Math.pow(1 - i / data.length, 6);
+      data[i] = (Math.random() * 2 - 1) * decay;
+    }
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buf;
+
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = kind === 'space' ? 1100 : (1600 + Math.random() * 500);
+    bp.Q.value = 0.9;
+
+    const g = audioCtx.createGain();
+    const vol = kind === 'return' ? 0.32 : 0.16;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    noise.connect(bp).connect(g).connect(audioCtx.destination);
+    noise.start(t);
+    noise.stop(t + dur);
+
+    // A soft low thud beneath, for body
+    const osc = audioCtx.createOscillator();
+    const og = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(kind === 'return' ? 180 : 240, t);
+    og.gain.setValueAtTime(0.08, t);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    osc.connect(og).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
+  function ding() {
+    if (muted || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1760, t);
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.9);
+  }
+
+  muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    muted = !muted;
+    muteBtn.textContent = muted ? '♪ sound off' : '♪ sound on';
+    ensureAudio();
+  });
+
+  // ---------- Rendering ----------
+  function renderSentence() {
+    stage.innerHTML = '';
+    words = [];
+    wIndex = 0;
+    typedInWord = 0;
+
+    const raw = SENTENCES[sIndex];
+    const parts = raw.split(' ');
+
+    parts.forEach((wtext) => {
+      const wEl = document.createElement('span');
+      wEl.className = 'word';
+      const chars = [];
+      for (const c of wtext) {
+        const cEl = document.createElement('span');
+        cEl.className = 'ch';
+        cEl.textContent = c;
+        wEl.appendChild(cEl);
+        chars.push(cEl);
+      }
+      stage.appendChild(wEl);
+      words.push({ text: wtext, el: wEl, chars });
+    });
+
+    activateWord(0);
+  }
+
+  function activateWord(i) {
+    words.forEach((w, idx) => {
+      w.el.classList.toggle('active', idx === i);
+    });
+    updateCaret();
+  }
+
+  function updateCaret() {
+    const w = words[wIndex];
+    if (!w) return;
+    // caret position = width of typed portion
+    let x = 0;
+    for (let k = 0; k < typedInWord && k < w.chars.length; k++) {
+      x += w.chars[k].getBoundingClientRect().width;
+    }
+    w.el.style.setProperty('--caret', x + 'px');
+  }
+
+  function markProgress() {
+    const pct = ((sIndex) / SENTENCES.length) * 100;
+    progress.style.width = pct + '%';
+  }
+
+  // ---------- Leaf-fall transition ----------
+  function scatterSentence(done) {
+    const rect = stage.getBoundingClientRect();
+    words.forEach((w, i) => {
+      w.el.classList.remove('active');
+      w.el.classList.add('flake');
+      const dx = (Math.random() * 2 - 1) * 220;
+      const dr = (Math.random() * 2 - 1) * 90;
+      w.el.style.setProperty('--dx', dx + 'px');
+      w.el.style.setProperty('--dr', dr + 'deg');
+      w.el.style.animationDelay = (i * 0.05) + 's';
+    });
+    setTimeout(done, 900 + words.length * 55);
+  }
+
+  // ---------- Input handling ----------
+  function handleChar(input) {
+    if (!started) return;
+    const w = words[wIndex];
+    if (!w) return;
+
+    const expected = w.text[typedInWord];
+
+    if (input === expected) {
+      w.chars[typedInWord].classList.add('typed');
+      typedInWord++;
+      click('key');
+      updateCaret();
+
+      if (typedInWord >= w.text.length) {
+        // word complete
+        w.el.classList.remove('active');
+        w.el.classList.add('done');
+        wIndex++;
+        typedInWord = 0;
+
+        if (wIndex >= words.length) {
+          // sentence complete
+          click('return');
+          ding();
+          setTimeout(() => finishSentence(), 260);
+        } else {
+          click('space');
+          activateWord(wIndex);
+        }
+      }
+    }
+    // wrong keys are simply ignored — the page stays quiet and forgiving
+  }
+
+  function finishSentence() {
+    markProgress();
+    scatterSentence(() => {
+      sIndex++;
+      if (sIndex >= SENTENCES.length) {
+        endJourney();
+      } else {
+        renderSentence();
+      }
+    });
+  }
+
+  function endJourney() {
+    progress.style.width = '100%';
+    stage.innerHTML = '';
+    document.getElementById('mute').style.opacity = '0';
+    revealLine.textContent = "…the words you typed were the prompt itself.";
+    reveal.classList.add('show');
+  }
+
+  // Keyboard
+  window.addEventListener('keydown', (e) => {
+    // Start on first meaningful key
+    if (!started) {
+      const first = SENTENCES[0][0];
+      if (e.key.length === 1) {
+        ensureAudio();
+        started = true;
+        hint.classList.add('gone');
+      }
+    }
+    if (e.key.length === 1) {
+      handleChar(e.key);
+      // prevent scrolling on space
+      if (e.key === ' ') e.preventDefault();
+    }
+  });
+
+  // Tap / click also focuses attention (mobile: bring up keyboard via hidden input)
+  const hiddenInput = document.createElement('input');
+  hiddenInput.setAttribute('autocomplete', 'off');
+  hiddenInput.setAttribute('autocorrect', 'off');
+  hiddenInput.setAttribute('autocapitalize', 'off');
+  hiddenInput.style.cssText = 'position:fixed;opacity:0;pointer-events:none;left:-9999px;';
+  document.body.appendChild(hiddenInput);
+
+  hiddenInput.addEventListener('input', (e) => {
+    const val = e.data;
+    if (!started && val) {
+      ensureAudio(); started = true; hint.classList.add('gone');
+    }
+    if (val) handleChar(val);
+    hiddenInput.value = '';
+  });
+
+  document.body.addEventListener('click', (e) => {
+    if (e.target.id === 'mute') return;
+    ensureAudio();
+    hiddenInput.focus();
+  });
+
+  window.addEventListener('resize', updateCaret);
+
+  // ---------- The soul viewer ----------
+  const soulScroll = document.getElementById('scroll-soul');
+  document.getElementById('soul-text').textContent = SOUL;
+  document.getElementById('show-soul').addEventListener('click', () => {
+    soulScroll.classList.add('show');
+  });
+  document.getElementById('close-soul').addEventListener('click', () => {
+    soulScroll.classList.remove('show');
+  });
+
+  // ---------- Begin ----------
+  renderSentence();
+})();
+</script>
+</body>
+</html>
