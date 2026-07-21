@@ -6,9 +6,9 @@ A small collection of single-page HTML pieces.
 
 ## Pages
 
-- [type4](type4.html) — ·
-- [type5](type5.html) — a quiet page
-- [type6](type6.html) — a quiet page
-- [type7](type7.html) — a letter
-- [type8](type8.html) — a quiet page
-- [type9](type9.html) — quiet
+- [attempt1](attempt1.html)
+- [attempt2](attempt2.html)
+- [attempt3](attempt3.html)
+- [attempt4](attempt4.html)
+- [attempt5](attempt5.html)
+- [attempt6](attempt6.html)
